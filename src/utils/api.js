@@ -7,7 +7,7 @@ const API_ENDPOINTS = {
   // Gemini doesn't need an endpoint as it uses the SDK
 }
 
-export async function generatePrompt({ description, appType, provider, apiKey, modelName }) {
+export async function generatePrompt({ description, appType, provider, apiKey, modelName, baseUrl }) {
   const systemPrompt = getSystemPrompt(appType)
   
   try {
@@ -18,6 +18,18 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
           systemPrompt,
           apiKey,
           modelName,
+          baseUrl: API_ENDPOINTS.OpenAI,
+        })
+      case 'OpenAI Compatible':
+        if (!baseUrl) {
+          throw new Error('Base URL is required for OpenAI Compatible providers')
+        }
+        return await generateOpenAIPrompt({
+          description,
+          systemPrompt,
+          apiKey,
+          modelName,
+          baseUrl: `${baseUrl.replace(/\/$/, '')}/chat/completions`,
         })
       case 'Anthropic':
         return await generateAnthropicPrompt({
@@ -42,9 +54,9 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
   }
 }
 
-async function generateOpenAIPrompt({ description, systemPrompt, apiKey, modelName }) {
+async function generateOpenAIPrompt({ description, systemPrompt, apiKey, modelName, baseUrl }) {
   const response = await axios.post(
-    API_ENDPOINTS.OpenAI,
+    baseUrl,
     {
       model: modelName,
       messages: [

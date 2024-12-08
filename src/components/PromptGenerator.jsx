@@ -13,6 +13,7 @@ const LLM_PROVIDERS = [
   'OpenAI',
   'Anthropic',
   'Google Gemini',
+  'OpenAI Compatible',
   // Add more providers as needed
 ]
 
@@ -22,6 +23,7 @@ export default function PromptGenerator() {
   const [provider, setProvider] = useState(LLM_PROVIDERS[0])
   const [apiKey, setApiKey] = useState('')
   const [modelName, setModelName] = useState('')
+  const [baseUrl, setBaseUrl] = useState('')
   const [generatedPrompt, setGeneratedPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -37,7 +39,8 @@ export default function PromptGenerator() {
         appType,
         provider,
         apiKey,
-        modelName
+        modelName,
+        baseUrl
       })
       setGeneratedPrompt(prompt)
     } catch (err) {
@@ -135,6 +138,26 @@ export default function PromptGenerator() {
             />
           </div>
         </div>
+
+        {provider === 'OpenAI Compatible' && (
+          <div>
+            <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700">
+              Base URL
+            </label>
+            <input
+              id="baseUrl"
+              type="url"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="http://localhost:1234/v1"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              required
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Enter the base URL of your OpenAI-compatible API (e.g., LMStudio, LocalAI)
+            </p>
+          </div>
+        )}
 
         <div className="flex justify-end space-x-4">
           <button
