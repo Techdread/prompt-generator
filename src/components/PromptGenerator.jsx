@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ClipboardDocumentIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { generatePrompt } from '../utils/api'
+import { promptsDb } from '../services/db'
 
 const APP_TYPES = [
   'HTML Games',
@@ -17,7 +18,7 @@ const LLM_PROVIDERS = [
   // Add more providers as needed
 ]
 
-export default function PromptGenerator() {
+export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   const [appDescription, setAppDescription] = useState('')
   const [appType, setAppType] = useState(APP_TYPES[0])
   const [provider, setProvider] = useState(LLM_PROVIDERS[0])
@@ -27,6 +28,19 @@ export default function PromptGenerator() {
   const [generatedPrompt, setGeneratedPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Load initial prompt if provided
+  useEffect(() => {
+    if (initialPrompt) {
+      setAppDescription(initialPrompt.appDescription || '')
+      setAppType(initialPrompt.appType || APP_TYPES[0])
+      setProvider(initialPrompt.provider || LLM_PROVIDERS[0])
+      setApiKey(initialPrompt.apiKey || '')
+      setModelName(initialPrompt.modelName || '')
+      setBaseUrl(initialPrompt.baseUrl || '')
+      setGeneratedPrompt(initialPrompt.generatedPrompt || '')
+    }
+  }, [initialPrompt])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -43,6 +57,22 @@ export default function PromptGenerator() {
         baseUrl
       })
       setGeneratedPrompt(prompt)
+
+      // Save the prompt to the database
+      const promptData = {
+        appDescription,
+        appType,
+        provider,
+        apiKey,
+        modelName,
+        baseUrl,
+        generatedPrompt: prompt
+      }
+      await promptsDb.savePrompt(promptData)
+      
+      if (onPromptGenerated) {
+        onPromptGenerated(promptData)
+      }
     } catch (err) {
       setError(err.message || 'Failed to generate prompt')
     } finally {
