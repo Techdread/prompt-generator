@@ -46,17 +46,32 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setGeneratedPrompt('')
 
     try {
-      const prompt = await generatePrompt({
-        description: appDescription,
-        appType,
-        provider,
-        apiKey,
-        modelName,
-        baseUrl
-      })
-      setGeneratedPrompt(prompt)
+      if (provider === 'OpenAI' || provider === 'OpenAI Compatible' || provider === 'Google Gemini') {
+        await generatePrompt({
+          description: appDescription,
+          appType,
+          provider,
+          apiKey,
+          modelName,
+          baseUrl,
+          onStream: (text) => {
+            setGeneratedPrompt(text)
+          }
+        })
+      } else {
+        const prompt = await generatePrompt({
+          description: appDescription,
+          appType,
+          provider,
+          apiKey,
+          modelName,
+          baseUrl
+        })
+        setGeneratedPrompt(prompt)
+      }
 
       // Save the prompt to the database
       const promptData = {
@@ -66,7 +81,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
         apiKey,
         modelName,
         baseUrl,
-        generatedPrompt: prompt
+        generatedPrompt
       }
       await promptsDb.savePrompt(promptData)
       

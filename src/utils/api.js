@@ -7,7 +7,7 @@ const API_ENDPOINTS = {
   // Gemini doesn't need an endpoint as it uses the SDK
 }
 
-export async function generatePrompt({ description, appType, provider, apiKey, modelName, baseUrl }) {
+export async function generatePrompt({ description, appType, provider, apiKey, modelName, baseUrl, onStream }) {
   const systemPrompt = getSystemPrompt(appType)
   
   try {
@@ -19,6 +19,7 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
           apiKey,
           modelName,
           baseUrl: API_ENDPOINTS.OpenAI,
+          onStream,
         })
       case 'OpenAI Compatible':
         if (!baseUrl) {
@@ -30,6 +31,7 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
           apiKey,
           modelName,
           baseUrl: `${baseUrl.replace(/\/$/, '')}/chat/completions`,
+          onStream,
         })
       case 'Anthropic':
         return await generateAnthropicPrompt({
@@ -44,6 +46,7 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
           systemPrompt,
           apiKey,
           modelName,
+          onStream,
         })
       default:
         throw new Error('Unsupported LLM provider')
@@ -54,26 +57,67 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
   }
 }
 
-async function generateOpenAIPrompt({ description, systemPrompt, apiKey, modelName, baseUrl }) {
-  const response = await axios.post(
-    baseUrl,
-    {
-      model: modelName,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: description },
-      ],
-      temperature: 0.7,
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  )
+async function generateOpenAIPrompt({ description, systemPrompt, apiKey, modelName, baseUrl, onStream }) {
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  }
 
-  return response.data.choices[0].message.content
+  const body = {
+    model: modelName || 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: description },
+    ],
+    stream: Boolean(onStream),
+  }
+
+  if (onStream) {
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error?.message || 'Failed to generate prompt')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            const content = parsed.choices[0]?.delta?.content
+            if (content) {
+              buffer += content
+              onStream(buffer)
+            }
+          } catch (e) {
+            console.error('Error parsing chunk:', e)
+          }
+        }
+      }
+    }
+    return buffer
+  } else {
+    const response = await axios.post(baseUrl, body, { headers })
+    return response.data.choices[0].message.content
+  }
 }
 
 async function generateAnthropicPrompt({ description, systemPrompt, apiKey, modelName }) {
@@ -97,14 +141,31 @@ async function generateAnthropicPrompt({ description, systemPrompt, apiKey, mode
   return response.data.content[0].text
 }
 
-async function generateGeminiPrompt({ description, systemPrompt, apiKey, modelName }) {
+async function generateGeminiPrompt({ description, systemPrompt, apiKey, modelName, onStream }) {
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: modelName || 'gemini-1.0-pro' })
+  const model = genAI.getGenerativeModel({ model: modelName || 'gemini-pro' })
 
-  const prompt = `${systemPrompt}\n\nUser Request: ${description}`
-  const result = await model.generateContent(prompt)
-  const response = await result.response
-  return response.text()
+  const prompt = `${systemPrompt}\n\n${description}`
+
+  try {
+    if (onStream) {
+      const result = await model.generateContentStream(prompt)
+      let buffer = ''
+      
+      for await (const chunk of result.stream) {
+        const text = chunk.text()
+        buffer += text
+        onStream(buffer)
+      }
+      
+      return buffer
+    } else {
+      const result = await model.generateContent(prompt)
+      return result.response.text()
+    }
+  } catch (error) {
+    throw new Error(`Gemini API error: ${error.message}`)
+  }
 }
 
 function getSystemPrompt(appType) {
