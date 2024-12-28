@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ClipboardDocumentIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
-import { generatePrompt } from '../utils/api'
+import { generatePrompt, testConnection } from '../utils/api'
 import { promptsDb } from '../services/db'
 
 const APP_TYPES = [
@@ -28,6 +28,8 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   const [generatedPrompt, setGeneratedPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState(null)
 
   // Load initial prompt if provided
   useEffect(() => {
@@ -95,6 +97,30 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
     }
   }
 
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true)
+    setConnectionStatus(null)
+    setError('')
+
+    try {
+      const result = await testConnection({
+        provider,
+        apiKey,
+        modelName,
+        baseUrl
+      })
+
+      setConnectionStatus(result)
+    } catch (err) {
+      setConnectionStatus({
+        success: false,
+        error: err.message || 'Connection test failed'
+      })
+    } finally {
+      setIsTestingConnection(false)
+    }
+  }
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedPrompt)
   }
@@ -142,7 +168,10 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
             <select
               id="provider"
               value={provider}
-              onChange={(e) => setProvider(e.target.value)}
+              onChange={(e) => {
+                setProvider(e.target.value)
+                setConnectionStatus(null)
+              }}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             >
               {LLM_PROVIDERS.map((p) => (
@@ -159,14 +188,41 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
             <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700">
               API Key
             </label>
-            <input
-              id="apiKey"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
+            <div className="mt-1 flex rounded-md shadow-sm">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value)
+                  setConnectionStatus(null)
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Enter your API key"
+              />
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={!apiKey || isTestingConnection}
+                className={`ml-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm ${
+                  !apiKey || isTestingConnection
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : connectionStatus?.success
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+              >
+                {isTestingConnection ? (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                ) : connectionStatus?.success ? (
+                  'Connected'
+                ) : (
+                  'Test Connection'
+                )}
+              </button>
+            </div>
+            {connectionStatus?.error && (
+              <p className="mt-1 text-sm text-red-600">{connectionStatus.error}</p>
+            )}
           </div>
 
           <div>
@@ -205,13 +261,6 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
         )}
 
         <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => {/* TODO: Implement test connection */}}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Test Connection
-          </button>
           <button
             type="submit"
             disabled={isLoading}

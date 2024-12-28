@@ -168,6 +168,86 @@ async function generateGeminiPrompt({ description, systemPrompt, apiKey, modelNa
   }
 }
 
+export async function testConnection({ provider, apiKey, modelName, baseUrl }) {
+  try {
+    switch (provider) {
+      case 'OpenAI':
+        // Test OpenAI connection with a minimal request
+        const openAiResponse = await axios.post(
+          API_ENDPOINTS.OpenAI,
+          {
+            model: modelName || 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: 'test' }],
+            max_tokens: 1
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        return { success: true };
+
+      case 'OpenAI Compatible':
+        if (!baseUrl) {
+          throw new Error('Base URL is required for OpenAI Compatible providers');
+        }
+        // Test custom OpenAI-compatible endpoint
+        const customResponse = await axios.post(
+          `${baseUrl.replace(/\/$/, '')}/chat/completions`,
+          {
+            model: modelName || 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: 'test' }],
+            max_tokens: 1
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        return { success: true };
+
+      case 'Anthropic':
+        // Test Anthropic connection
+        const anthropicResponse = await axios.post(
+          API_ENDPOINTS.Anthropic,
+          {
+            model: modelName || 'claude-2',
+            messages: [{ role: 'user', content: 'test' }],
+            max_tokens: 1
+          },
+          {
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        return { success: true };
+
+      case 'Google Gemini':
+        // Test Gemini connection
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: modelName || 'gemini-pro' });
+        await model.generateContent('test');
+        return { success: true };
+
+      default:
+        throw new Error('Unsupported provider');
+    }
+  } catch (error) {
+    // Return detailed error information
+    return {
+      success: false,
+      error: error.response?.data?.error?.message || error.message || 'Connection failed'
+    };
+  }
+}
+
 function getSystemPrompt(appType) {
   const basePrompt = 'You are an expert software developer specializing in creating detailed and comprehensive prompts for application development. Your task is to enhance and expand the user\'s app description into a detailed prompt that covers all necessary aspects of the application.'
 
