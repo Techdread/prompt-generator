@@ -7,14 +7,22 @@ const API_ENDPOINTS = {
   // Gemini doesn't need an endpoint as it uses the SDK
 }
 
-export async function generatePrompt({ description, appType, provider, apiKey, modelName, baseUrl, onStream }) {
-  const systemPrompt = getSystemPrompt(appType)
+export async function generatePrompt({ description, appType, provider, apiKey, modelName, baseUrl, verbosityLevel = 'standard', onStream }) {
+  const systemPrompt = getSystemPrompt(appType, verbosityLevel)
+  
+  const formatInstructions = {
+    concise: 'Provide ONLY the prompt text. Do not include any meta-commentary, explanations, or introductory text.',
+    standard: 'Provide the prompt with minimal context. Keep any explanations brief and focused.',
+    detailed: 'Provide a comprehensive prompt with detailed explanations and considerations.'
+  }
+
+  const userPrompt = `${description}\n\nFormatting Instructions: ${formatInstructions[verbosityLevel]}`
   
   try {
     switch (provider) {
       case 'OpenAI':
         return await generateOpenAIPrompt({
-          description,
+          description: userPrompt,
           systemPrompt,
           apiKey,
           modelName,
@@ -26,7 +34,7 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
           throw new Error('Base URL is required for OpenAI Compatible providers')
         }
         return await generateOpenAIPrompt({
-          description,
+          description: userPrompt,
           systemPrompt,
           apiKey,
           modelName,
@@ -35,14 +43,14 @@ export async function generatePrompt({ description, appType, provider, apiKey, m
         })
       case 'Anthropic':
         return await generateAnthropicPrompt({
-          description,
+          description: userPrompt,
           systemPrompt,
           apiKey,
           modelName,
         })
       case 'Google Gemini':
         return await generateGeminiPrompt({
-          description,
+          description: userPrompt,
           systemPrompt,
           apiKey,
           modelName,
@@ -248,18 +256,19 @@ export async function testConnection({ provider, apiKey, modelName, baseUrl }) {
   }
 }
 
-function getSystemPrompt(appType) {
-  const basePrompt = 'You are an expert software developer specializing in creating detailed and comprehensive prompts for application development. Your task is to enhance and expand the user\'s app description into a detailed prompt that covers all necessary aspects of the application.'
-
-  const typeSpecificPrompts = {
-    'HTML Games': `${basePrompt}\n\nFocus on HTML5 Canvas, JavaScript game mechanics, sprite management, collision detection, game loop implementation, and responsive design considerations. Include requirements for assets, animations, and sound effects.`,
-    
-    'React Vite Games': `${basePrompt}\n\nFocus on React component architecture, state management, game logic implementation using hooks, asset management with Vite, and performance optimization. Include considerations for build process and deployment.`,
-    
-    'HTML Three.js Visualizations': `${basePrompt}\n\nFocus on Three.js scene setup, camera positioning, lighting, material properties, geometry creation, animation system, and user interactions. Include requirements for 3D models, textures, and performance optimization.`,
-    
-    'Python Utilities': `${basePrompt}\n\nFocus on command-line interface design, input validation, error handling, file operations, and potential integration with external services or APIs. Include requirements for dependencies, configuration, and documentation.`,
+function getSystemPrompt(appType, verbosityLevel = 'standard') {
+  const baseInstructions = {
+    concise: 'Generate a direct, implementation-focused prompt without any explanations or meta-commentary. The prompt should be ready to be fed directly into an LLM.',
+    standard: 'Generate a balanced prompt that includes key implementation details while maintaining clarity and focus.',
+    detailed: 'Generate a comprehensive prompt that covers all aspects of the implementation with detailed explanations and considerations.'
   }
 
-  return typeSpecificPrompts[appType] || basePrompt
+  const appTypeInstructions = {
+    'HTML Games': 'Focus on HTML5 Canvas, game mechanics, user interactions, and browser compatibility.',
+    'React Vite Games': 'Focus on React components, state management, game logic, and build optimization.',
+    'HTML Three.js Visualizations': 'Focus on 3D rendering, scene setup, camera controls, and performance optimization.',
+    'Python Utilities': 'Focus on modularity, error handling, CLI interface, and Python best practices.'
+  }
+
+  return `You are an expert software developer specializing in creating ${appType}. ${baseInstructions[verbosityLevel]} Consider these specific aspects: ${appTypeInstructions[appType]}`
 }

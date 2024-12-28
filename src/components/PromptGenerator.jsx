@@ -18,6 +18,12 @@ const LLM_PROVIDERS = [
   // Add more providers as needed
 ]
 
+const VERBOSITY_LEVELS = [
+  { value: 'concise', label: 'Concise', description: 'Direct prompt without any explanations' },
+  { value: 'standard', label: 'Standard', description: 'Balanced prompt with some context' },
+  { value: 'detailed', label: 'Detailed', description: 'Comprehensive prompt with full explanations' }
+]
+
 export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   const [appDescription, setAppDescription] = useState('')
   const [appType, setAppType] = useState(APP_TYPES[0])
@@ -25,6 +31,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   const [apiKey, setApiKey] = useState('')
   const [modelName, setModelName] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
+  const [verbosityLevel, setVerbosityLevel] = useState('standard')
   const [generatedPrompt, setGeneratedPrompt] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -41,6 +48,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
       setModelName(initialPrompt.modelName || '')
       setBaseUrl(initialPrompt.baseUrl || '')
       setGeneratedPrompt(initialPrompt.generatedPrompt || '')
+      setVerbosityLevel(initialPrompt.verbosityLevel || 'standard')
     }
   }, [initialPrompt])
 
@@ -59,6 +67,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
           apiKey,
           modelName,
           baseUrl,
+          verbosityLevel,
           onStream: (text) => {
             setGeneratedPrompt(text)
           }
@@ -70,7 +79,8 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
           provider,
           apiKey,
           modelName,
-          baseUrl
+          baseUrl,
+          verbosityLevel
         })
         setGeneratedPrompt(prompt)
       }
@@ -83,6 +93,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
         apiKey,
         modelName,
         baseUrl,
+        verbosityLevel,
         generatedPrompt
       }
       await promptsDb.savePrompt(promptData)
@@ -259,6 +270,37 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
             </p>
           </div>
         )}
+
+        {/* Verbosity Level */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Verbosity Level
+          </label>
+          <div className="mt-1 grid grid-cols-3 gap-3">
+            {VERBOSITY_LEVELS.map(({ value, label, description }) => (
+              <div
+                key={value}
+                className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm focus:outline-none ${
+                  verbosityLevel === value
+                    ? 'border-indigo-500 ring-2 ring-indigo-500'
+                    : 'border-gray-300'
+                }`}
+                onClick={() => setVerbosityLevel(value)}
+              >
+                <div className="flex flex-1">
+                  <div className="flex flex-col">
+                    <span className="block text-sm font-medium text-gray-900">
+                      {label}
+                    </span>
+                    <span className="mt-1 flex items-center text-sm text-gray-500">
+                      {description}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex justify-end space-x-4">
           <button
