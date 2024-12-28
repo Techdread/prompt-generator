@@ -27,7 +27,7 @@ A modern, interactive prompt generator built with React and Vite that supports m
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/prompt-generator.git
+git clone https://github.com/Techdread/prompt-generator.git
 cd prompt-generator
 ```
 
