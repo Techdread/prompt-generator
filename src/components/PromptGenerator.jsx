@@ -74,6 +74,23 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
             setGeneratedPrompt(text)
           }
         })
+        
+        // Save after streaming is complete
+        const promptData = {
+          appDescription,
+          appType,
+          provider,
+          apiKey,
+          modelName,
+          baseUrl,
+          verbosityLevel,
+          generatedPrompt: generatedPrompt // Use the final streamed prompt
+        }
+        await promptsDb.savePrompt(promptData)
+        
+        if (onPromptGenerated) {
+          onPromptGenerated(promptData)
+        }
       } else {
         const prompt = await generatePrompt({
           description: appDescription,
@@ -85,23 +102,23 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
           verbosityLevel
         })
         setGeneratedPrompt(prompt)
-      }
 
-      // Save the prompt to the database
-      const promptData = {
-        appDescription,
-        appType,
-        provider,
-        apiKey,
-        modelName,
-        baseUrl,
-        verbosityLevel,
-        generatedPrompt
-      }
-      await promptsDb.savePrompt(promptData)
-      
-      if (onPromptGenerated) {
-        onPromptGenerated(promptData)
+        // Save non-streaming prompt
+        const promptData = {
+          appDescription,
+          appType,
+          provider,
+          apiKey,
+          modelName,
+          baseUrl,
+          verbosityLevel,
+          generatedPrompt: prompt
+        }
+        await promptsDb.savePrompt(promptData)
+        
+        if (onPromptGenerated) {
+          onPromptGenerated(promptData)
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to generate prompt')
