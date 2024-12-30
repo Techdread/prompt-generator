@@ -99,6 +99,9 @@ export default function PromptHistory({ onSelectPrompt }) {
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   Provider: {prompt.provider}
+                  {prompt.modelName && (
+                    <span className="ml-2">• Model: {prompt.modelName}</span>
+                  )}
                 </div>
               </div>
             ))}
