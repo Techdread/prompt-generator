@@ -32,11 +32,11 @@
 }
 
 .markdown-preview code {
-  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono;
+  @apply bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800;
 }
 
 .markdown-preview pre {
-  @apply bg-gray-100 p-4 rounded-md overflow-x-auto font-mono text-sm;
+  @apply bg-gray-100 p-4 rounded-md overflow-x-auto font-mono text-sm text-gray-800;
 }
 
 .markdown-preview blockquote {
