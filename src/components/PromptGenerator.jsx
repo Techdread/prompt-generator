@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ClipboardDocumentIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { generatePrompt, testConnection } from '../utils/api'
 import { promptsDb } from '../services/db'
+import ReactMarkdown from 'react-markdown'
 
 const APP_TYPES = [
   'HTML Games',
@@ -37,6 +38,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   const [error, setError] = useState('')
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState(null)
+  const [showMarkdown, setShowMarkdown] = useState(true)
 
   // Load initial prompt if provided
   useEffect(() => {
@@ -132,7 +134,7 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
     }
   }
 
-  const copyToClipboard = () => {
+  const handleCopy = () => {
     navigator.clipboard.writeText(generatedPrompt)
   }
 
@@ -322,24 +324,42 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
       {generatedPrompt && (
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-medium text-gray-900">Generated Prompt</h3>
-            <div className="flex space-x-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Generated Prompt
+            </label>
+            <div className="flex items-center space-x-4">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={showMarkdown}
+                  onChange={(e) => setShowMarkdown(e.target.checked)}
+                />
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span className="ml-2 text-sm font-medium text-gray-700">Markdown</span>
+              </label>
               <button
-                onClick={copyToClipboard}
-                className="inline-flex items-center p-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                <ClipboardDocumentIcon className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="inline-flex items-center p-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                <ArrowPathIcon className="h-5 w-5" />
+                <ClipboardDocumentIcon className="h-4 w-4 mr-1" />
+                Copy
               </button>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-md p-4">
-            <pre className="whitespace-pre-wrap">{generatedPrompt}</pre>
+          <div className="mt-1 relative">
+            {showMarkdown ? (
+              <div className="prose max-w-none p-4 bg-white rounded-md border border-gray-300 shadow-sm min-h-[200px] markdown-preview">
+                <ReactMarkdown>{generatedPrompt}</ReactMarkdown>
+              </div>
+            ) : (
+              <textarea
+                value={generatedPrompt}
+                readOnly
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm min-h-[200px]"
+              />
+            )}
           </div>
         </div>
       )}
