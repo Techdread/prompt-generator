@@ -156,8 +156,8 @@ export default function PromptGenerator({ initialPrompt, onPromptGenerated }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="bg-white rounded-lg shadow p-6 flex-1 w-full">
+      <form onSubmit={handleSubmit} className="space-y-6 w-full">
         <div>
           <label htmlFor="appDescription" className="block text-sm font-medium text-gray-700">
             App Description
